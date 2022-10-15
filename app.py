@@ -8,12 +8,11 @@ from starlette.responses import StreamingResponse
 
 from dotenv import load_dotenv
 import qrcode
-import io
+from io import BytesIO
 import os
 from pydantic import BaseModel
 
 from deta import Deta
-
 
 app = FastAPI()
 
@@ -24,8 +23,7 @@ deta = Deta(PROJECT_KEY)
 drive = deta.Drive("qr_codes")
 
 origins = [
-	"https://node-xtjyra--3000.local.webcontainer.io/",
-	"https://react-qr-app.carlosm271.repl.co/"	
+	
 ]
 
 
@@ -44,13 +42,20 @@ class DataToConvert(BaseModel):
 
 
 
+@app.get("/")
+def hello():
+    return "Hello, welcome to QR Code Generator!"
+
 @app.post('/qr')
 def qr_generator(data: DataToConvert):
-	name = data.name
-	data = data.text
-	img = qrcode.make(data)
-	res = drive.put(name, img.save(f"{name}.png"), path=f'./{name}.png')
-	return res
+    name = data.name
+    data = data.text
+    img = qrcode.make(data)
+    img_io = BytesIO()
+    img.save(img_io, 'PNG')
+    img_io.seek(0)
+    res = drive.put(name,img_io)
+    return res
 
 @app.get("/image/{name}")
 def download_img(name:str):
